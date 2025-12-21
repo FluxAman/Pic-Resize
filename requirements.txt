@@ -16,5 +16,7 @@ pymongo==4.15.5
 requests==2.32.5
 sqlparse==0.5.4
 urllib3==2.6.2
-gunicorn
-whitenoise
+gunicorn==23.0.0
+whitenoise==6.8.2
+dj-database-url==2.3.0
+psycopg2-binary==2.9.10
