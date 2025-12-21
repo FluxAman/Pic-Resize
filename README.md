@@ -36,7 +36,7 @@ No backend required. No data is stored on any server.
 ## 🌐 Live Demo
 
 👉 **Live Website:**
-[https://fluxaman.github.io/Pic-Resize/](https://fluxaman.github.io/Pic-Resize/)
+ [pic-resize.onrender.com](https://pic-resize.onrender.com/)
 
 ---
 
