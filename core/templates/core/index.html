@@ -1,15 +1,21 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ProResize</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        const USER_IS_AUTHENTICATED = "{{ user.is_authenticated|yesno:'true,false' }}" === "true";
+        const SAVE_IMAGE_URL = "{% url 'save_image' %}";
+        const CSRF_TOKEN = "{{ csrf_token }}";
+    </script>
 </head>
 
 <body>
@@ -21,7 +27,20 @@
                 <i class="fas fa-image"></i>
                 <h1>ProResize</h1>
             </div>
-            <p class="tagline">Professional Image Processing & Optimization</p>
+            <div class="header-controls" style="display: flex; gap: 1rem; align-items: center;">
+                {% if user.is_authenticated %}
+                <a href="{% url 'profile' %}" class="btn-text" style="color:white; text-decoration:none;"><i
+                        class="fas fa-user"></i> My Profile</a>
+                <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-text"
+                        style="color:#aaa; background:none; border:none; cursor:pointer;">Logout</button>
+                </form>
+                {% else %}
+                <a href="{% url 'login' %}" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Login /
+                    Sign Up</a>
+                {% endif %}
+            </div>
         </header>
 
         <!-- Upload Section -->
@@ -312,8 +331,26 @@
         <p>ProResize - Professional Image Processing Tool • All processing done locally in your browser</p>
     </footer>
 
+    <div id="authModal" class="modal"
+        style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center;">
+        <div class="modal-content"
+            style="background-color: #1e1e1e; padding: 2rem; border-radius: 12px; width: 400px; text-align: center; border: 1px solid #333; color: #fff;">
+            <span class="close-modal"
+                style="float: right; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa;">&times;</span>
+            <h2 style="margin-bottom: 1rem;">Authentication Required</h2>
+            <p style="margin-bottom: 2rem; color: #ccc;">Please login or create an account to apply changes and process
+                your images. This allows you to save your work to your personal history.</p>
+            <div class="modal-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                <a href="{% url 'login' %}" class="btn-primary" style="text-decoration: none;">Login</a>
+                <a href="{% url 'register' %}" class="btn-secondary"
+                    style="text-decoration: none; padding: 0.8rem 1.5rem; border-radius: 6px; background-color: #333; color: white;">Sign
+                    Up</a>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="script.js"></script>
+    <script src="{% static 'core/js/script.js' %}"></script>
 </body>
 
 </html>

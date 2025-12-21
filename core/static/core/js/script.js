@@ -76,6 +76,19 @@ function initializeEventListeners() {
     document.querySelectorAll('.preset-btn[data-filter]').forEach(btn => {
         btn.addEventListener('click', () => applyPresetFilter(btn.dataset.filter));
     });
+
+    // Modal Control
+    const authModal = document.getElementById('authModal');
+    if (authModal) {
+        authModal.querySelector('.close-modal').addEventListener('click', () => {
+            authModal.style.display = 'none';
+        });
+        window.addEventListener('click', (e) => {
+            if (e.target === authModal) {
+                authModal.style.display = 'none';
+            }
+        });
+    }
 }
 
 // Tab System
@@ -328,8 +341,18 @@ function applyPresetDimension(btn) {
     toggleResizeMode();
 }
 
+// Auth Helper
+function checkAuth() {
+    if (typeof USER_IS_AUTHENTICATED !== 'undefined' && !USER_IS_AUTHENTICATED) {
+        document.getElementById('authModal').style.display = 'flex';
+        return false;
+    }
+    return true;
+}
+
 // Apply Resize
 function applyResize() {
+    // if (!checkAuth()) return; // Auth check moved to download
     if (!state.currentImage) return;
 
     const mode = document.getElementById('resizeMode').value;
@@ -358,6 +381,13 @@ function applyResize() {
 
         elements.preview.src = dataUrl;
         elements.processedPreview.src = dataUrl;
+
+        // Update state.currentImage so subsequent filters apply to the resized image
+        const img = new Image();
+        img.onload = () => {
+            state.currentImage = img;
+        };
+        img.src = dataUrl;
 
         // Update processed info
         const blob = dataURLtoBlob(dataUrl);
@@ -457,13 +487,14 @@ function applyFiltersPreview() {
 }
 
 function applyFilters() {
+    // if (!checkAuth()) return; // Auth check moved to download
     if (!state.currentImage) return;
 
     const canvas = elements.canvas;
     const ctx = canvas.getContext('2d');
 
     canvas.width = state.currentImage.width;
-    canvas.height = state.height;
+    canvas.height = state.currentImage.height;
 
     // Apply CSS filters to canvas
     ctx.filter = `
@@ -523,6 +554,7 @@ function applyPresetFilter(filterName) {
 
 // Crop (Basic implementation)
 function applyCrop() {
+    // if (!checkAuth()) return; // Auth check moved to download
     if (!state.currentImage) return;
 
     const ratio = document.getElementById('cropRatio').value;
@@ -566,6 +598,7 @@ function applyCrop() {
 
 // Batch Processing
 async function processBatch() {
+    // if (!checkAuth()) return; // Auth check moved to download
     if (state.images.length === 0) return;
 
     elements.progressContainer.style.display = 'block';
@@ -674,6 +707,8 @@ function showDownloadButton() {
 }
 
 function downloadImage() {
+    if (!checkAuth()) return;
+
     // Get the current preview image
     const canvas = elements.canvas;
     const ctx = canvas.getContext('2d');
@@ -707,6 +742,23 @@ function downloadImage() {
                 return;
             }
 
+            // Save to server if authenticated
+            if (typeof USER_IS_AUTHENTICATED !== 'undefined' && USER_IS_AUTHENTICATED) {
+                const formData = new FormData();
+                formData.append('image', blob, `processed-image.${format}`);
+                formData.append('filename', `processed-${Date.now()}.${format}`);
+
+                fetch(SAVE_IMAGE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': CSRF_TOKEN
+                    },
+                    body: formData
+                }).then(response => {
+                    console.log('Image saved status:', response.status);
+                }).catch(err => console.error('Error saving image:', err));
+            }
+
             // Create download link
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -730,6 +782,9 @@ function downloadImage() {
 
 async function downloadAllAsZip() {
     if (state.processedImages.length === 0) return;
+
+    // Auth Check
+    if (!checkAuth()) return;
 
     const zip = new JSZip();
 
