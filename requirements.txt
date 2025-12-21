@@ -8,6 +8,9 @@ django-allauth>=0.61
 
 # REQUIRED for Google social login
 requests>=2.31.0
+cryptography>=41.0.0
+PyJWT>=2.8.0
+
 
 # Image Processing
 pillow>=10.0
@@ -23,5 +26,5 @@ dj-database-url>=2.1
 psycopg2-binary>=2.9
 
 
-PyJWT>=2.8.0
+
 
