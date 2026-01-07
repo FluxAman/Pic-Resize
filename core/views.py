@@ -40,7 +40,14 @@ def save_image(request):
         return JsonResponse({'status': 'success'})
     return JsonResponse({'error': 'Invalid request'}, status=405)
 
+from django.core.paginator import Paginator
+
 @login_required
 def profile(request):
-    images = request.user.processed_images.order_by('-created_at')
-    return render(request, 'core/profile.html', {'images': images})
+    image_list = request.user.processed_images.order_by('-created_at')
+    paginator = Paginator(image_list, 12) # Show 12 images per page
+
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'core/profile.html', {'page_obj': page_obj})
