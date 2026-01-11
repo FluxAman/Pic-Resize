@@ -126,6 +126,12 @@ const PicEdit = {
                     e.stopPropagation();
                     this.startResize(e, handle.dataset.handle);
                 });
+                // Touch support for resize handles
+                handle.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    const touch = e.touches[0];
+                    this.startResize(touch, handle.dataset.handle);
+                }, { passive: true });
             });
 
             // Handle move (drag the selection)
@@ -133,10 +139,24 @@ const PicEdit = {
                 if (e.target.classList.contains('crop-handle')) return;
                 this.startDrag(e);
             });
+            // Touch support for drag
+            selection.addEventListener('touchstart', (e) => {
+                if (e.target.classList.contains('crop-handle')) return;
+                const touch = e.touches[0];
+                this.startDrag(touch);
+            }, { passive: true });
 
             // Global mouse events
             document.addEventListener('mousemove', (e) => this.onMouseMove(e));
             document.addEventListener('mouseup', () => this.onMouseUp());
+            // Touch events
+            document.addEventListener('touchmove', (e) => {
+                if (PicEdit.state.crop.isDragging || PicEdit.state.crop.isResizing) {
+                    e.preventDefault();
+                    this.onMouseMove(e.touches[0]);
+                }
+            }, { passive: false });
+            document.addEventListener('touchend', () => this.onMouseUp());
         },
 
         startResize(e, handle) {
@@ -303,39 +323,65 @@ const PicEdit = {
         },
 
         downloadImage() {
-            if (PicEdit.state.compressedBlob) {
-                const blob = PicEdit.state.compressedBlob;
+            const d = PicEdit.dom;
+            const format = d.downloadFormat?.value || 'png';
+            const formatExt = format === 'jpeg' ? 'jpg' : format;
+
+            // Helper function for proper URL cleanup
+            const downloadBlob = (blob, filename) => {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                link.download = `picedit_compressed.jpg`;
+                link.download = filename;
                 link.href = url;
+                document.body.appendChild(link);
                 link.click();
-                setTimeout(() => URL.revokeObjectURL(url), 100);
+                document.body.removeChild(link);
+                // Immediate cleanup is safer than setTimeout
+                URL.revokeObjectURL(url);
+            };
+
+            if (PicEdit.state.compressedBlob) {
+                const blob = PicEdit.state.compressedBlob;
+                downloadBlob(blob, `picedit_compressed.${formatExt}`);
                 PicEdit.ui.showToast(`Downloaded: ${(blob.size / 1024).toFixed(2)} KB`, 'success');
                 return;
             }
 
-            const d = PicEdit.dom;
-            const format = d.downloadFormat.value;
-
             const img = new Image();
             img.onload = () => {
-                d.canvas.width = img.width;
-                d.canvas.height = img.height;
-                const ctx = d.canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
+                try {
+                    d.canvas.width = img.width;
+                    d.canvas.height = img.height;
+                    const ctx = d.canvas.getContext('2d');
+                    if (!ctx) {
+                        PicEdit.ui.showToast('Failed to get canvas context', 'error');
+                        return;
+                    }
+                    ctx.drawImage(img, 0, 0);
 
-                const mime = format === 'jpeg' ? 'image/jpeg' : format === 'png' ? 'image/png' : 'image/webp';
+                    const mime = format === 'jpeg' ? 'image/jpeg' : format === 'png' ? 'image/png' : 'image/webp';
 
-                d.canvas.toBlob((blob) => {
-                    PicEdit.ui.showToast('Image ready for download', 'success');
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.download = `picedit_image.${format}`;
-                    link.href = url;
-                    link.click();
-                    setTimeout(() => URL.revokeObjectURL(url), 100);
-                }, mime, 1.0);
+                    d.canvas.toBlob((blob) => {
+                        if (!blob) {
+                            PicEdit.ui.showToast('Failed to create image blob', 'error');
+                            return;
+                        }
+                        PicEdit.ui.showToast('Image ready for download', 'success');
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.download = `picedit_image.${formatExt}`;
+                        link.href = url;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }, mime, 1.0);
+                } catch (error) {
+                    PicEdit.ui.showToast('Error processing image: ' + error.message, 'error');
+                }
+            };
+            img.onerror = () => {
+                PicEdit.ui.showToast('Failed to load image for download', 'error');
             };
             img.src = d.preview.src;
         }
@@ -721,8 +767,21 @@ const PicEdit = {
         },
 
         updateProcessedInfo(dataUrl, w, h) {
-            const size = Math.round((dataUrl.length - 22) * 3 / 4) / 1024;
-            PicEdit.dom.processedInfo.textContent = `${w}×${h} px • ${size.toFixed(2)} KB`;
+            // More accurate size calculation using blob
+            if (dataUrl.startsWith('data:')) {
+                // Convert dataURL to blob for accurate size
+                fetch(dataUrl)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        const sizeKB = (blob.size / 1024).toFixed(2);
+                        PicEdit.dom.processedInfo.textContent = `${w}×${h} px • ${sizeKB} KB`;
+                    })
+                    .catch(() => {
+                        // Fallback to approximation if fetch fails
+                        const size = Math.round((dataUrl.length - 22) * 3 / 4) / 1024;
+                        PicEdit.dom.processedInfo.textContent = `${w}×${h} px • ~${size.toFixed(2)} KB`;
+                    });
+            }
         }
     }
 };

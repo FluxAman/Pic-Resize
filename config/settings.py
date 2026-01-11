@@ -44,6 +44,13 @@ if RENDER_EXTERNAL_HOSTNAME:
 if DEBUG:
     ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
 
+# Fallback for non-Render deployments (allow all hosts if none configured)
+if not ALLOWED_HOSTS and not DEBUG:
+    import logging
+    logging.warning("No ALLOWED_HOSTS configured! Add RENDER_EXTERNAL_HOSTNAME or configure ALLOWED_HOSTS.")
+    # Allow all hosts as fallback - configure properly for production
+    ALLOWED_HOSTS = ['*']
+
 # Production security settings
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
@@ -88,6 +95,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -110,6 +118,11 @@ DATABASES = {
         conn_max_age=600
     )
 }
+
+# Warn if using SQLite in production
+if not DEBUG and 'sqlite' in DATABASES['default'].get('ENGINE', ''):
+    import logging
+    logging.warning("Using SQLite in production is not recommended. Set DATABASE_URL for a production database.")
 
 
 # Password validation
@@ -154,7 +167,15 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Django 5.0+ uses STORAGES instead of deprecated STATICFILES_STORAGE
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 
 # Default primary key field type
