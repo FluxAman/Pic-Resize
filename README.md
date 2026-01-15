@@ -36,7 +36,7 @@ No backend required. No data is stored on any server.
 ## 🌐 Live Demo
 
 👉 **Live Website:**
- [pic-resize.onrender.com](https://pic-resize.onrender.com/)
+ [pic-resize.onrender.com]((https://picedit-d1sg.onrender.com/))
 
 ---
 
