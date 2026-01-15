@@ -1,6 +1,7 @@
 
 
 # Pic-Resize 🎨📸
+https://picedit-d1sg.onrender.com/
 
 Pic-Resize is a simple and user-friendly web application that allows anyone to upload a photo and edit it directly in the browser. The goal of this project is to make basic image editing fast, lightweight, and accessible without requiring heavy software or technical knowledge.
 
@@ -30,13 +31,6 @@ All processing happens on the client side, making it fast and privacy-friendly.
 * **JavaScript** – Image processing and interactivity
 
 No backend required. No data is stored on any server.
-
----
-
-## 🌐 Live Demo
-
-👉 **Live Website:**
- [pic-resize.onrender.com]((https://picedit-d1sg.onrender.com/))
 
 ---
 
